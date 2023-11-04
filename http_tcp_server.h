@@ -7,26 +7,27 @@
 #include <stdlib.h>
 #include <string>
 
+// struct in_addr{
+//     unsigned long sAddr;
+// };
+
+
+// struct sockaddr_in {
+//     short           sinFamily;
+//     unsigned short  sinPort;    
+//     struct in_addr  sinAddr;        
+//     char            sinZero[8];
+// };
+
+
 namespace http {
 
-    typedef struct {
-        unsigned long sAddr;
-    } in_addr;
-
-
-    typedef struct SOCKADDR_IN {
-        short           sinFamily;
-        unsigned short  sinPort;    
-        in_addr         sinAddr;        
-        char            sinZero[8];
-    } sockaddr;
-
-    
     class TcpServer {
 
         public:
             TcpServer(std::string ipAdd_, int port_);
             ~TcpServer();
+            int startListen();
 
 
         private:
@@ -35,13 +36,15 @@ namespace http {
             int _comSocket;
             int _comNewSocket;
             long _comIncomeMessage;
-            sockaddr _comSocketAdd;
+            struct sockaddr_in _comSocketAdd;
             unsigned int _comSocketAddLen;
             std::string _comServerMessage;
 
             int setUpSocket();
             int closeUpSocket();
-            int startListen();
+            int acceptConnection(int &newSocket_ );
+            void sendResponse();
+            std::string responce();
             
     };
 

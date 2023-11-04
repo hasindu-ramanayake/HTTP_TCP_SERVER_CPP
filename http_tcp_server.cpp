@@ -43,17 +43,17 @@ http::TcpServer::TcpServer( std::string ipAdd_, int port_ )
     _comIncomeMessage(),
     _comSocketAdd(),
     _comSocketAddLen(sizeof(_comSocketAdd)),
-    _comServerMessage("wellcome to the Server")
+    _comServerMessage(responce())
 {
 
     serverLog::printInfoLog("Starting server..");
-    _comSocketAdd.sinFamily = AF_INET;
-    _comSocketAdd.sinPort= htons(_comPort);
-    _comSocketAdd.sinAddr.sAddr = inet_addr( _comIpAdd.c_str() );
+    _comSocketAdd.sin_family = AF_INET;
+    _comSocketAdd.sin_port= htons(_comPort);
+    _comSocketAdd.sin_addr.s_addr = inet_addr( _comIpAdd.c_str() );
 
     if ( setUpSocket() != 0 ) {
         std::ostringstream ss;
-        ss << "Fail to start the server port: " << ntohs(_comSocketAdd.sinPort);
+        ss << "Fail to start the server port: " << ntohs(_comSocketAdd.sin_port);
         serverLog::printInfoLog(ss.str());
     }
 }
@@ -70,7 +70,7 @@ int http::TcpServer::setUpSocket() {
         return 1;
     }
 
-    if ( bind(_comSocket, (const http::sockaddr* )&_comSocketAdd, _comSocketAddLen ) < 0 ) {
+    if ( bind(_comSocket, (sockaddr* )&_comSocketAdd, _comSocketAddLen ) < 0 ) {
         serverLog::printErrorLog("Cannot bind socket and address.");
         return 1;
     }
@@ -83,7 +83,7 @@ int http::TcpServer::startListen() {
     }
 
     std::ostringstream ss;
-    ss << " connected address: " << inet_ntoa(_comSocketAdd.sinAddr) << " PORT: " << ntohs(_comSocketAdd.sinPort) << " ***\n\n";
+    ss << " connected address: " << inet_ntoa(_comSocketAdd.sin_addr) << " PORT: " << ntohs(_comSocketAdd.sin_port) << " ***\n\n";
     serverLog::printInfoLog(ss.str());
 
     int bytesReceived;
@@ -91,7 +91,7 @@ int http::TcpServer::startListen() {
     while (true)
     {
         serverLog::printInfoLog("Waiting for a new connection ");
-        // acceptConnection(_comNewSocket);
+        acceptConnection(_comNewSocket);
 
         char buffer[BUFFER_SIZE] = {0};
         bytesReceived = read(_comNewSocket, buffer, BUFFER_SIZE);
@@ -103,7 +103,7 @@ int http::TcpServer::startListen() {
         serverLog::printInfoLog ("Received Request from client");
         serverLog::printInfoLog(ss.str());
 
-        // sendResponse();
+        sendResponse();
         
 
         close(_comNewSocket);
@@ -111,6 +111,42 @@ int http::TcpServer::startListen() {
 
     return 0;
 }
+
+int http::TcpServer::acceptConnection(int &newSocket_ ) {
+    newSocket_ = accept( _comSocket, (sockaddr*)&_comSocketAdd, &_comSocketAddLen );
+
+    if ( newSocket_ < 0 ) {
+        std::ostringstream ss;
+        ss << " server fail to accept incomming stream ADD: " << inet_ntoa(_comSocketAdd.sin_addr) << " PORT: " << ntohs(_comSocketAdd.sin_port);
+        serverLog::printErrorLog(ss.str());
+    }
+
+    return 0;
+}
+
+std::string http::TcpServer::responce() {
+    std::string html = "<!DOCTYPE html><html lanf=\"en\"><body><h1>Welcome to C++ server<h1></body>";
+    std::ostringstream ss;
+    ss << "HTTP/1.1 200 OK\n";
+    ss << "Content-type:text/html\n";
+    ss << "Content-Lenth: " << html.size() << std::endl << std::endl;
+    ss << html;
+
+    return ss.str();
+}
+
+
+void http::TcpServer::sendResponse() {
+    long sendByte;
+    sendByte = write( _comNewSocket, _comServerMessage.c_str(), _comServerMessage.size());
+    if ( sendByte == _comServerMessage.size() ) {
+        serverLog::printInfoLog("Server responce to the client");
+    } else {
+        serverLog::printErrorLog("Error sending response to client");
+    }
+
+}
+
 
 
 int http::TcpServer::closeUpSocket() {
